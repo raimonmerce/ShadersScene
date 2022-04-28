@@ -1,5 +1,6 @@
 # ShadersScene
 **Representation of a scene to try different shaders:**  
+Hold Shift to move using FPS controls to move arrounf the room  
 
 In front of the scene from the initial position, a shader to project a video on a curved screen on real time  
 
