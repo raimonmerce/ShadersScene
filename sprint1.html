@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			
+			margin: 0;
+			overflow: hidden;
+			background-color: #AAAAAA;
+			background-attachment: fixed !important;
+			}
+		</style>
+		<style>
+			body {
+				font-family: Monospace;
+				margin: 0px;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+<body>
+
+	<script type="x-shader/x-vertex" id="vsRGBshadow">
+		uniform sampler2D tex;
+		varying vec3 color;
+		uniform float pointSize;
+		uniform bool rgb;
+		uniform bool hsv;
+        uniform bool hsl;
+        uniform bool xyz;
+        uniform bool srgb;
+
+		vec3 rgb2hsv(vec3 c) {
+            float cMax=max(max(c.r,c.g),c.b),
+                  cMin=min(min(c.r,c.g),c.b),
+                  delta=cMax-cMin;
+            vec3 hsv=vec3(0.,0.,cMax);
+            if(cMax>cMin){
+                hsv.y=delta/cMax;
+                if(c.r==cMax){
+                    hsv.x=(c.g-c.b)/delta;
+                }else if(c.g==cMax){
+                    hsv.x=2.+(c.b-c.r)/delta;
+                }else{
+                    hsv.x=4.+(c.r-c.g)/delta;
+                }
+                hsv.x=fract(hsv.x/6.);
+            }
+            return hsv;
+        }
+
+        vec3 rgb2hsl(vec3 c){
+            float cMin=min(min(c.r,c.g),c.b),
+                  cMax=max(max(c.r,c.g),c.b),
+                  delta=cMax-cMin;
+            vec3 hsl=vec3(0.,0.,(cMax+cMin)/2.);
+            if(delta!=0.0){ //If it has chroma and isn't gray.
+                if(hsl.z<.5){
+                    hsl.y=delta/(cMax+cMin); //Saturation.
+                }else{
+                    hsl.y=delta/(2.-cMax-cMin); //Saturation.
+                }
+                float deltaR=(((cMax-c.r)/6.)+(delta/2.))/delta,
+                      deltaG=(((cMax-c.g)/6.)+(delta/2.))/delta,
+                      deltaB=(((cMax-c.b)/6.)+(delta/2.))/delta;
+                //Hue.
+                if(c.r==cMax){
+                    hsl.x=deltaB-deltaG;
+                }else if(c.g==cMax){
+                    hsl.x=(1./3.)+deltaR-deltaB;
+                }else{ //if(c.b==cMax){
+                    hsl.x=(2./3.)+deltaG-deltaR;
+                }
+                hsl.x=fract(hsl.x);
+            }
+            return hsl;
+        }
+
+        vec3 rgb2xyz(vec3 c){
+            vec3 tmp=vec3(
+                (c.r>.04045)?pow((c.r+.055)/1.055,2.4):c.r/12.92,
+                (c.g>.04045)?pow((c.g+.055)/1.055,2.4):c.g/12.92,
+                (c.b>.04045)?pow((c.b+.055)/1.055,2.4):c.b/12.92
+            );
+            mat3 mat=mat3(
+                .4124,.3576,.1805,
+                .2126,.7152,.0722,
+                .0193,.1192,.9505
+            );
+            return 100.*(tmp*mat);
+        }
+
+        const float SRGB_ALPHA=.055;
+        float linear2srgb(float x){
+            if(x<=.0031308){
+                return 12.92*x;
+            }else{
+                return(1.+SRGB_ALPHA)*pow(x,1./2.4)-SRGB_ALPHA;
+            }
+        }
+
+        vec3 rgb2srgb(vec3 c){
+            return vec3(
+                linear2srgb(c.r),
+                linear2srgb(c.g),
+                linear2srgb(c.b)
+            );
+        }
+
+		void main() {
+			color = texture2D ( tex, position.xy ).rgb;
+			gl_PointSize = pointSize;
+
+			if (hsv == true) {
+                color = rgb2hsv(color);
+            } else if (hsl == true) {
+                color = rgb2hsl(color);
+            } else if (xyz == true) {
+                color = rgb2xyz(color);
+            } else if (srgb == true) {
+                color = rgb2srgb(color);
+            }
+
+			float x = color.x - .5;
+			float z = color.z - .5;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4(x, -0.5, z , 1.0);
+		}
+	</script>
+
+	<script type="x-shader/x-vertex" id="vsRGB">
+		uniform sampler2D tex;
+		varying vec3 color;
+		uniform float height;
+		uniform float pointSize;
+		uniform bool rgb;
+		uniform bool hsv;
+        uniform bool hsl;
+        uniform bool xyz;
+        uniform bool srgb;
+
+		vec3 rgb2hsv(vec3 c) {
+            float cMax=max(max(c.r,c.g),c.b),
+                  cMin=min(min(c.r,c.g),c.b),
+                  delta=cMax-cMin;
+            vec3 hsv=vec3(0.,0.,cMax);
+            if(cMax>cMin){
+                hsv.y=delta/cMax;
+                if(c.r==cMax){
+                    hsv.x=(c.g-c.b)/delta;
+                }else if(c.g==cMax){
+                    hsv.x=2.+(c.b-c.r)/delta;
+                }else{
+                    hsv.x=4.+(c.r-c.g)/delta;
+                }
+                hsv.x=fract(hsv.x/6.);
+            }
+            return hsv;
+        }
+
+        vec3 rgb2hsl(vec3 c){
+            float cMin=min(min(c.r,c.g),c.b),
+                  cMax=max(max(c.r,c.g),c.b),
+                  delta=cMax-cMin;
+            vec3 hsl=vec3(0.,0.,(cMax+cMin)/2.);
+            if(delta!=0.0){ //If it has chroma and isn't gray.
+                if(hsl.z<.5){
+                    hsl.y=delta/(cMax+cMin); //Saturation.
+                }else{
+                    hsl.y=delta/(2.-cMax-cMin); //Saturation.
+                }
+                float deltaR=(((cMax-c.r)/6.)+(delta/2.))/delta,
+                      deltaG=(((cMax-c.g)/6.)+(delta/2.))/delta,
+                      deltaB=(((cMax-c.b)/6.)+(delta/2.))/delta;
+                //Hue.
+                if(c.r==cMax){
+                    hsl.x=deltaB-deltaG;
+                }else if(c.g==cMax){
+                    hsl.x=(1./3.)+deltaR-deltaB;
+                }else{ //if(c.b==cMax){
+                    hsl.x=(2./3.)+deltaG-deltaR;
+                }
+                hsl.x=fract(hsl.x);
+            }
+            return hsl;
+        }
+
+        vec3 rgb2xyz(vec3 c){
+            vec3 tmp=vec3(
+                (c.r>.04045)?pow((c.r+.055)/1.055,2.4):c.r/12.92,
+                (c.g>.04045)?pow((c.g+.055)/1.055,2.4):c.g/12.92,
+                (c.b>.04045)?pow((c.b+.055)/1.055,2.4):c.b/12.92
+            );
+            mat3 mat=mat3(
+                .4124,.3576,.1805,
+                .2126,.7152,.0722,
+                .0193,.1192,.9505
+            );
+            return 100.*(tmp*mat);
+        }
+
+        const float SRGB_ALPHA=.055;
+        float linear2srgb(float x){
+            if(x<=.0031308){
+                return 12.92*x;
+            }else{
+                return(1.+SRGB_ALPHA)*pow(x,1./2.4)-SRGB_ALPHA;
+            }
+        }
+
+        vec3 rgb2srgb(vec3 c){
+            return vec3(
+                linear2srgb(c.r),
+                linear2srgb(c.g),
+                linear2srgb(c.b)
+            );
+        }
+
+		void main() {
+			color = texture2D ( tex, position.xy ).rgb;
+			color.y = color.y * height;
+			gl_PointSize = pointSize;
+
+			if (hsv == true) {
+                color = rgb2hsv(color);
+            } else if (hsl == true) {
+                color = rgb2hsl(color);
+            } else if (xyz == true) {
+                color = rgb2xyz(color);
+            } else if (srgb == true) {
+                color = rgb2srgb(color);
+            }
+
+			gl_Position = projectionMatrix * modelViewMatrix * vec4(color-vec3(.5,.5,.5), 1.0);
+		}
+	</script>
+
+	<script type="x-shader/x-fragment" id="fsRGBshadow">
+		varying vec3 color;
+
+		void main() {
+			gl_FragColor.rgb = vec3(0.0, 0.0, 0.0);
+			gl_FragColor.a = 0.7;
+		}
+	</script>
+
+	<script type="x-shader/x-fragment" id="fsRGB">
+		varying vec3 color;
+
+		void main() {
+			gl_FragColor.rgb = color;
+			gl_FragColor.a = 1.0;
+		}
+	</script>
+
+	<script id="vsVideo" type="shader">
+	varying vec2 vUv;
+	uniform float curvature;
+	void main() {
+		vUv = vec2( uv.x, 1.0-uv.y );
+		float x = curvature*sin ( position.x/curvature );
+		float z = curvature-curvature*cos ( position.x/curvature);
+		vec4 mvPosition = modelViewMatrix * vec4( x, position.y, z , 1.0 );
+		gl_Position = projectionMatrix * mvPosition;
+	}
+	</script>
+
+	<script id="fsVideo" type="shader">
+	precision highp float;
+	const int kernelSizeDiv2 = 2;
+	uniform sampler2D image;
+	uniform int sizeDiv2;
+	uniform vec2 resolution;
+	uniform float colorScaleR;
+	uniform float colorScaleG;
+	uniform float colorScaleB;
+	uniform bool invert;
+	
+	varying vec2 vUv;
+	void main(void) {
+		vec2 cellSize = 1.0 / resolution.xy;
+		vec2 uv = vUv.xy;
+
+		vec4 textureValue = vec4 ( 0,0,0,0 );
+		for (int i=-sizeDiv2;i<=sizeDiv2;i++)
+			for (int j=-sizeDiv2;j<=sizeDiv2;j++)
+				textureValue += texture2D( image, uv + vec2( float(i)*cellSize.x, float(j)*cellSize.y ) );
+		textureValue /= float ((sizeDiv2*2+1)*(sizeDiv2*2+1));
+		if (invert)
+		{
+			gl_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
+			gl_FragColor.rgb = vec3 ( 1.0 ) - gl_FragColor.rgb;
+		}
+		else
+		gl_FragColor = vec4(vec3(colorScaleR,colorScaleG,colorScaleB),1.0)*textureValue;
+	}
+	</script>
+
+<script type="x-shader/x-vertex" id="vsElevation">
+	varying vec2 vUv;
+	uniform float scaleElevation;
+	uniform sampler2D tex;
+	uniform bool invert;
+
+	void main() {
+		vUv = uv;
+		vec3 color = texture2D ( tex, vUv ).rgb;
+		float l = length ( color );
+		vec3 tmp = position;
+		if (invert) {
+			tmp.z = tmp.z + scaleElevation*(2.0 - l);
+		} else {
+			tmp.z = tmp.z + l*scaleElevation;
+		}
+		
+		gl_Position = projectionMatrix * modelViewMatrix * vec4(tmp, 1.0);
+	}
+</script>
+
+<script type="x-shader/x-fragment" id="fsElevation">
+	varying vec2 vUv;
+	uniform sampler2D tex;
+
+	void main() {
+		vec3 color = texture2D ( tex, vUv ).rgb;
+		gl_FragColor.rgb = color;
+		gl_FragColor.a = 1.0;
+	}
+</script>
+
+<script type="x-shader/x-vertex" id="vsLine">
+	uniform float time;
+	uniform float mx;
+	uniform float my;
+	uniform float mz;
+	uniform float dx;
+	uniform float dy;
+	uniform float dz;
+	uniform bool tx;
+	uniform bool ty;
+	uniform bool tz;
+	uniform bool sx;
+	uniform bool sy;
+	uniform bool sz;
+	attribute vec3 color;
+	varying vec3 c;
+	void main() {
+		gl_PointSize = 3.0;
+
+		float simbx = 1.0;
+		if (sx) simbx = -1.0;
+
+		float simby = 1.0;
+		if (sy) simby = -1.0;
+
+		float simbz = 1.0;
+		if (sz) simbz = -1.0;
+
+		float extrax = 1.0;
+		if (ty) extrax = sin ( position.x/dz + simbx * time);
+
+		float extray = 1.0;
+		if (tz) extray = cos ( position.x/dx + simby * time);
+
+		float extraz = 1.0;
+		if (sz) extraz = sin ( position.x/dz + simbz * time);
+
+		float x = mx * cos ( position.x/dx + time) * extrax;
+		float y = my * sin ( position.x/dy + time) * extray;
+		float z = mz * cos ( position.x/dz + time) * extraz;
+		vec4 mvPosition = modelViewMatrix * vec4( x, y, z , 1.0 );
+		c = color;
+		gl_Position = projectionMatrix * mvPosition;
+
+	}
+
+</script>
+
+<script type="x-shader/x-fragment" id="fsLine">
+
+	varying vec3 c;
+	uniform float time;
+	void main() {
+		float r = sin ( c.x + 3.*time);
+		float g = cos ( c.y - 2.*time);
+		float b = sin ( c.z + time);
+		gl_FragColor = vec4( r, g, b, 1.0 );
+
+	}
+
+</script>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
